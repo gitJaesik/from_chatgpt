@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  MyLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/events/myEventsLog
+
+  MyEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: LogDirectlyToCloudWatch
+      Description: "Event Rule to capture and log specific events"
+      EventPattern:
+        source:
+          - "aws.ec2"
+        detail-type:
+          - "AWS API Call via CloudTrail"
+      State: ENABLED
+      Targets:
+        - Id: "Target1"
+          Arn: !GetAtt MyLogGroup.Arn  # This is not a valid target since Log Groups cannot be directly targeted.
+          RoleArn: !GetAtt LoggingRole.Arn
+
+  LoggingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "WriteToLogGroup"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !GetAtt MyLogGroup.Arn
+
+Outputs:
+  LogGroupArn:
+    Description: "ARN of the CloudWatch Log Group"
+    Value: !GetAtt MyLogGroup.Arn
+  EventRuleArn:
+    Description: "ARN of the EventBridge Rule"
+    Value: !GetAtt MyEventRule.Arn
