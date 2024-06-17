@@ -1,5 +1,6 @@
 import * as forge from 'node-forge';
 import jwt from 'jsonwebtoken';
+import NodeRSA from 'node-rsa';
 
 // Base64로 인코딩된 PKCS#8 Private Key 문자열 (예제)
 const base64EncodedKey = "MIIBVQIBADANBgkqhkiG9w0BAQEFAASCATswggE3AgEAAkEAp..."; // 실제 키를 여기에 넣으세요
@@ -57,4 +58,28 @@ function GeneratedForService(role: string, issueTo: string, tokens: string[], rs
   const token = jwt.sign(claims, rsaKey, { algorithm: 'RS256', header: { alg: 'RS256' } });
 
   return token;
+}
+
+
+
+
+// Base64로 인코딩된 PKCS#8 Private Key (예제 키)
+const base64EncodedKey = `MIIBVQIBADANBgkqhkiG9w0BAQEFAASCATswggE3AgEAAkEAp...`; // 실제 키를 여기에 넣으세요
+
+try {
+  // Base64 디코딩
+  const decodedBytes = Buffer.from(base64EncodedKey, 'base64');
+
+  // PKCS#8 Private Key 파싱
+  const key = new NodeRSA();
+  key.importKey(decodedBytes, 'pkcs8-private-pem');
+
+  // RSA Private Key인지 확인
+  if (key.isPrivate()) {
+    console.log(key.exportKey('private'));
+  } else {
+    console.error("Not an RSA private key");
+  }
+} catch (err) {
+  console.error("Error decoding or parsing private key:", err);
 }
