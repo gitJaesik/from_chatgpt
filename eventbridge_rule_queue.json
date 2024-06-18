@@ -1,0 +1,8 @@
+{
+  "source": ["aws.mediaconvert"],
+  "detail-type": ["MediaConvert Job State Change"],
+  "detail": {
+    "status": ["COMPLETE"],
+    "queue": ["arn:aws:mediaconvert:REGION:ACCOUNT_ID:queues/YOUR_QUEUE_NAME"]
+  }
+}
