@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  MyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: your-s3-bucket-name
+        S3Key: your-lambda-code.zip
+      Runtime: python3.8
+      Timeout: 60
+      Environment:
+        Variables:
+          ENV_VAR: "value"
+
+  MySQSQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: MyQueue
+
+  MyLambdaEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10
+      EventSourceArn: !GetAtt MySQSQueue.Arn
+      FunctionName: !GetAtt MyLambdaFunction.Arn
+      Enabled: True
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Service: 
+                - "lambda.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Policies: 
+        - PolicyName: "root"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action: 
+                  - "logs:*"
+                  - "dynamodb:*"
+                  - "s3:*"
+                  - "sqs:*"
+                Resource: "*"
+
+Outputs:
+  LambdaFunctionArn:
+    Value: !GetAtt MyLambdaFunction.Arn
+  SQSQueueUrl:
+    Value: !Ref MySQSQueue
+  SQSQueueArn:
+    Value: !GetAtt MySQSQueue.Arn
