@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  MyQueue:
+    Type: "AWS::SQS::Queue"
+    Properties:
+      QueueName: "MyEventQueue"
+
+  MyQueuePolicy:
+    Type: "AWS::SQS::QueuePolicy"
+    Properties: 
+      Queues: 
+        - !Ref MyQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: "*"
+            Action: "sqs:SendMessage"
+            Resource: !GetAtt MyQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt MyEventRule.Arn
+
+  MyEventRule:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Name: "MyEventRule"
+      EventPattern:
+        source:
+          - "aws.ec2"
+        detail-type:
+          - "EC2 Instance State-change Notification"
+      Targets:
+        - Arn: !GetAtt MyQueue.Arn
+          Id: "MyQueueTarget"
+
+  MyEventRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "MyEventRolePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "sqs:SendMessage"
+                Resource: !GetAtt MyQueue.Arn
+
+Outputs:
+  QueueURL:
+    Description: "URL of the SQS Queue"
+    Value: !Ref MyQueue
+  QueueARN:
+    Description: "ARN of the SQS Queue"
+    Value: !GetAtt MyQueue.Arn
+  EventRuleARN:
+    Description: "ARN of the EventBridge Rule"
+    Value: !GetAtt MyEventRule.Arn
