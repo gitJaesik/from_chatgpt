@@ -3,14 +3,35 @@
 ```ts
 import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { Writable } from 'stream';
 
 @Injectable()
 export class LoggingMiddleware implements NestMiddleware {
   private logger = new Logger('HTTP');
 
   use(req: Request, res: Response, next: NextFunction): void {
-    const { method, originalUrl } = req;
+    const { method, originalUrl, body: reqBody } = req;
     const startTime = Date.now();
+    let responseBody = '';
+
+    // Custom writable stream to capture response body
+    const originalWrite = res.write.bind(res);
+    const originalEnd = res.end.bind(res);
+
+    const writableStream = new Writable({
+      write(chunk, encoding, callback) {
+        responseBody += chunk.toString(); // Accumulate response chunks
+        originalWrite(chunk, encoding, callback); // Pass through original write
+      },
+    });
+
+    res.write = writableStream.write.bind(writableStream);
+    res.end = (...args) => {
+      if (args[0]) {
+        responseBody += args[0].toString();
+      }
+      originalEnd.apply(res, args);
+    };
 
     res.on('finish', () => {
       const { statusCode } = res;
@@ -19,17 +40,17 @@ export class LoggingMiddleware implements NestMiddleware {
       const responseTime = endTime - startTime;
 
       this.logger.log(
-        `${method} ${originalUrl} ${statusCode} ${contentLength} - ${responseTime}ms`,
+        `${method} ${originalUrl} ${statusCode} ${contentLength || 0} - ${responseTime}ms`,
       );
 
       this.logger.debug({
         method,
         originalUrl,
         statusCode,
-        contentLength,
+        contentLength: contentLength || 0,
         responseTime: `${responseTime}ms`,
-        queryParams: req.query,
-        body: req.body,
+        reqBody,
+        resBody: responseBody,
       });
     });
 
