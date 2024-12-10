@@ -1,0 +1,18 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+  build:
+    commands:
+      - echo "Fetching the latest task definition..."
+      - LATEST_TASK_DEF=$(aws ecs list-task-definitions --family-prefix my-task-family --sort DESC --query 'taskDefinitionArns[0]' --output text)
+      - echo "Latest Task Definition ARN: $LATEST_TASK_DEF"
+      - echo "Fetching the details of the latest task definition..."
+      - aws ecs describe-task-definition --task-definition $LATEST_TASK_DEF --query 'taskDefinition' --output json > taskdef.json
+      - echo "Latest task definition saved as taskdef.json"
+
+artifacts:
+  files:
+    - taskdef.json
