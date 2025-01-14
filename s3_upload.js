@@ -1,19 +1,21 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { Readable } from "stream";
+const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { Readable } = require("stream");
 
-// S3 설정
-const bucketName = "your-bucket-name";
-const objectKey = "offset.txt";
-const region = "your-region";
+const bucketName = "your-bucket-name"; // S3 버킷 이름
+const objectKey = "offset.txt"; // S3 객체 키
+const region = "your-region"; // AWS 리전
 
 const s3Client = new S3Client({ region });
 
+/**
+ * S3에서 파일 내용 읽기
+ */
 async function getObjectContent(bucket, key) {
   try {
     const getCommand = new GetObjectCommand({ Bucket: bucket, Key: key });
     const response = await s3Client.send(getCommand);
 
-    const stream = response.Body as Readable;
+    const stream = response.Body;
     const chunks = [];
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -27,6 +29,9 @@ async function getObjectContent(bucket, key) {
   }
 }
 
+/**
+ * S3에 파일 업로드
+ */
 async function putObjectContent(bucket, key, content) {
   const putCommand = new PutObjectCommand({
     Bucket: bucket,
@@ -37,6 +42,9 @@ async function putObjectContent(bucket, key, content) {
   await s3Client.send(putCommand);
 }
 
+/**
+ * offset.txt 업데이트 함수
+ */
 async function updateOffsetFile() {
   const existingContent = await getObjectContent(bucketName, objectKey);
   let newContent;
@@ -56,7 +64,31 @@ async function updateOffsetFile() {
   await putObjectContent(bucketName, objectKey, newContent);
   console.log("Updated content:");
   console.log(newContent);
+
+  return newContent; // Lambda 응답
 }
 
-// 실행
-updateOffsetFile().catch(console.error);
+/**
+ * Lambda 핸들러
+ */
+exports.handler = async (event) => {
+  try {
+    const updatedContent = await updateOffsetFile();
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: "File updated successfully",
+        content: updatedContent,
+      }),
+    };
+  } catch (error) {
+    console.error("Error updating file:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        message: "Error updating file",
+        error: error.message,
+      }),
+    };
+  }
+};
