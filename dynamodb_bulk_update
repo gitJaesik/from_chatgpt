@@ -1,0 +1,57 @@
+import {
+  DynamoDBClient
+} from "@aws-sdk/client-dynamodb";
+
+import {
+  DynamoDBDocumentClient,
+  BatchWriteCommand
+} from "@aws-sdk/lib-dynamodb";
+
+// 1. AWS DynamoDB Client 설정
+const client = new DynamoDBClient({ region: "ap-northeast-2" });
+const docClient = DynamoDBDocumentClient.from(client);
+
+// 2. 저장할 79개 데이터 예시
+const items = Array.from({ length: 79 }, (_, i) => ({
+  id: `item-${i + 1}`,
+  name: `Item ${i + 1}`
+}));
+
+// 3. 25개씩 나누는 헬퍼 함수
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
+// 4. 실제 DynamoDB 업서트 처리
+async function bulkUpsertDynamoDB() {
+  const tableName = "YourTableName";
+  const chunks = chunkArray(items, 25); // 한 번에 25개씩
+
+  for (const chunk of chunks) {
+    const command = new BatchWriteCommand({
+      RequestItems: {
+        [tableName]: chunk.map((item) => ({
+          PutRequest: { Item: item } // Upsert
+        }))
+      }
+    });
+
+    try {
+      const response = await docClient.send(command);
+      console.log(`✅ Wrote ${chunk.length} items`);
+
+      if (response.UnprocessedItems && Object.keys(response.UnprocessedItems).length > 0) {
+        console.warn("⚠️ UnprocessedItems detected! Consider retrying:", response.UnprocessedItems);
+        // TODO: 재시도 로직 추가
+      }
+    } catch (err) {
+      console.error("❌ BatchWriteCommand failed:", err);
+    }
+  }
+}
+
+bulkUpsertDynamoDB();
