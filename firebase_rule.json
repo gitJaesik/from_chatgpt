@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "datagroup1": {
+      // 전체 삭제 차단: datagroup1의 모든 자식이 지워지는 경우 막기
+      ".write": "!data.exists() || newData.exists()",
+
+      "$child": {
+        // 자식 항목들(a, b, c 등) 개별 접근 허용
+        ".write": true
+      }
+    }
+  }
+}
