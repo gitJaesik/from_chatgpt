@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dogs",
+  "type": "object",
+  "additionalProperties": false,
+
+  "definitions": {
+    "LivePlatformPlatform": {
+      "type": "string",
+      "enum": ["YOUTUBE", "TWITCH", "NAVER", "KAKAO"]
+    },
+
+    "PlatformUpdatedAt": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/definitions/LivePlatformPlatform" },
+      "additionalProperties": { "type": "string" }
+      /* required를 지정하지 않으므로 각 키는 선택적 → Partial 효과 */
+    }
+  },
+
+  "properties": {
+    "platform_updated_at": { "$ref": "#/definitions/PlatformUpdatedAt" }
+  }
+  /* required에 넣지 않으므로 platform_updated_at 자체도 선택적 */
+}
